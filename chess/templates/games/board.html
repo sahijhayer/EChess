@@ -1,0 +1,477 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'play/style.css' %}">
+    <title>Game</title>
+  </head>
+  <nav class="navbar navbar-default navbar-expand-sm">
+    <a class="navbar-brand" href="{% url 'home' %}">
+      <img src="{% static 'play/logo.png' %}" class="logo d-inline-block align-top" width="35" height="35" alt="">
+    </a>
+    <a class="navbar-brand" href="{% url 'home' %}">
+      EChess
+    </a>
+  </nav>
+  <body>
+    <div id="app">
+    </div>
+    <script type="text/babel">
+      let gameMoves = {{game_json|safe}};
+      gameMoves.splice(0, 0, {"fields": {
+          check: false,
+          a1: "w-rook",
+          a2: "w-pawn",
+          a3: "",
+          a4: "",
+          a5: "",
+          a6: "",
+          a7: "b-pawn",
+          a8: "b-rook",
+
+          b1: "w-knight",
+          b2: "w-pawn",
+          b3: "",
+          b4: "",
+          b5: "",
+          b6: "",
+          b7: "b-pawn",
+          b8: "b-knight",
+
+          c1: "w-bishop",
+          c2: "w-pawn",
+          c3: "",
+          c4: "",
+          c5: "",
+          c6: "",
+          c7: "b-pawn",
+          c8: "b-bishop",
+
+          d1: "w-queen",
+          d2: "w-pawn",
+          d3: "",
+          d4: "",
+          d5: "",
+          d6: "",
+          d7: "b-pawn",
+          d8: "b-queen",
+
+          e1: "w-king",
+          e2: "w-pawn",
+          e3: "",
+          e4: "",
+          e5: "",
+          e6: "",
+          e7: "b-pawn",
+          e8: "b-king",
+
+          f1: "w-bishop",
+          f2: "w-pawn",
+          f3: "",
+          f4: "",
+          f5: "",
+          f6: "",
+          f7: "b-pawn",
+          f8: "b-bishop",
+
+          g1: "w-knight",
+          g2: "w-pawn",
+          g3: "",
+          g4: "",
+          g5: "",
+          g6: "",
+          g7: "b-pawn",
+          g8: "b-bishop",
+
+          h1: "w-rook",
+          h2: "w-pawn",
+          h3: "",
+          h4: "",
+          h5: "",
+          h6: "",
+          h7: "b-pawn",
+          h8: "b-rook"
+        }});
+
+      const squares = {
+				a1: "dark",
+				a2: "light",
+				a3: "dark",
+				a4: "light",
+				a5: "dark",
+				a6: "light",
+				a7: "dark",
+				a8: "light",
+
+				b1: "light",
+				b2: "dark",
+				b3: "light",
+				b4: "dark",
+				b5: "light",
+				b6: "dark",
+				b7: "light",
+				b8: "dark",
+
+				c1: "dark",
+				c2: "light",
+				c3: "dark",
+				c4: "light",
+				c5: "dark",
+				c6: "light",
+				c7: "dark",
+				c8: "light",
+
+				d1: "light",
+				d2: "dark",
+				d3: "light",
+				d4: "dark",
+				d5: "light",
+				d6: "dark",
+				d7: "light",
+				d8: "dark",
+
+				e1: "dark",
+				e2: "light",
+				e3: "dark",
+				e4: "light",
+				e5: "dark",
+				e6: "light",
+				e7: "dark",
+				e8: "light",
+
+				f1: "light",
+				f2: "dark",
+				f3: "light",
+				f4: "dark",
+				f5: "light",
+				f6: "dark",
+				f7: "light",
+				f8: "dark",
+
+				g1: "dark",
+				g2: "light",
+				g3: "dark",
+				g4: "light",
+				g5: "dark",
+				g6: "light",
+				g7: "dark",
+				g8: "light",
+
+				h1: "light",
+				h2: "dark",
+				h3: "light",
+				h4: "dark",
+				h5: "light",
+				h6: "dark",
+				h7: "light",
+				h8: "dark"
+			};
+      let turn = 0;
+
+      class Square extends React.Component {
+        render() {
+					if (squares[this.props.value] === "light") {
+						if (this.props.piece === "w-rook") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-rook-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-bishop") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-bishop-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-knight") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-knight-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-queen") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-queen-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-king") {
+              if (gameMoves[turn]["fields"]["check"] == false || turn % 2 != 0) {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-king-light.png' %}" />
+                );
+              } else {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-check-light.png' %}" />
+                );
+              }
+						}
+						if (this.props.piece === "w-pawn") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-pawn-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "") {
+							return (
+								<input class="nopiece" type="image" src="{% static 'play/pieces/light.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-rook") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-rook-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-knight") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-knight-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-bishop") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-bishop-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-king") {
+              if (gameMoves[turn]["fields"]["check"] == false || turn % 2 === 0) {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-king-light.png' %}" />
+                );
+              } else {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-check-light.png' %}" />
+                );
+              }
+						}
+						if (this.props.piece === "b-queen") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-queen-light.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-pawn") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-pawn-light.png' %}" />
+							);
+						}
+
+					} else {
+						if (this.props.piece === "w-rook") {
+							return (
+								<input  class="but" type="image" src="{% static 'play/pieces/w-rook-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-bishop") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-bishop-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-knight") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-knight-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-queen") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-queen-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "w-king") {
+              if (gameMoves[turn]["fields"]["check"] == false || turn % 2 != 0) {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-king-dark.png' %}" />
+                );
+              } else {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-check-dark.png' %}" />
+                );
+              }
+						}
+						if (this.props.piece === "w-pawn") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/w-pawn-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "") {
+							return (
+								<input class="nopiece" type="image" src="{% static 'play/pieces/dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-rook") {
+							return (
+								<input  class="but" type="image" src="{% static 'play/pieces/b-rook-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-knight") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-knight-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-bishop") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-bishop-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-king") {
+              if (gameMoves[turn]["fields"]["check"] == false || turn % 2 != 0) {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-king-dark.png' %}" />
+                );
+              } else {
+                return (
+                  <input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-check-dark.png' %}" />
+                );
+              }
+						}
+						if (this.props.piece === "b-queen") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-queen-dark.png' %}" />
+							);
+						}
+						if (this.props.piece === "b-pawn") {
+							return (
+								<input class="but" type="image" src="{% static 'play/pieces/b-pawn-dark.png' %}" />
+							);
+						}
+					}
+				}
+      }
+
+      class Board extends React.Component {
+        render() {
+          return (
+            <div class="flex-container">
+              <div>
+                <Square value="a8" piece={gameMoves[this.props.turn]["fields"]["a8"]}  />
+                <Square value="b8" piece={gameMoves[this.props.turn]["fields"]["b8"]}  />
+                <Square value="c8" piece={gameMoves[this.props.turn]["fields"]["c8"]}  />
+                <Square value="d8" piece={gameMoves[this.props.turn]["fields"]["d8"]}  />
+                <Square value="e8" piece={gameMoves[this.props.turn]["fields"]["e8"]}  />
+                <Square value="f8" piece={gameMoves[this.props.turn]["fields"]["f8"]}  />
+                <Square value="g8" piece={gameMoves[this.props.turn]["fields"]["g8"]}  />
+                <Square value="h8" piece={gameMoves[this.props.turn]["fields"]["h8"]}  />
+
+              </div>
+              <div>
+                <Square value="a7" piece={gameMoves[this.props.turn]["fields"]["a7"]}  />
+                <Square value="b7" piece={gameMoves[this.props.turn]["fields"]["b7"]}  />
+                <Square value="c7" piece={gameMoves[this.props.turn]["fields"]["c7"]}  />
+                <Square value="d7" piece={gameMoves[this.props.turn]["fields"]["d7"]}  />
+                <Square value="e7" piece={gameMoves[this.props.turn]["fields"]["e7"]}  />
+                <Square value="f7" piece={gameMoves[this.props.turn]["fields"]["f7"]}  />
+                <Square value="g7" piece={gameMoves[this.props.turn]["fields"]["g7"]}  />
+                <Square value="h7" piece={gameMoves[this.props.turn]["fields"]["h7"]}  />
+              </div>
+              <div>
+                <Square value="a6" piece={gameMoves[this.props.turn]["fields"]["a6"]}  />
+                <Square value="b6" piece={gameMoves[this.props.turn]["fields"]["b6"]}  />
+                <Square value="c6" piece={gameMoves[this.props.turn]["fields"]["c6"]}  />
+                <Square value="d6" piece={gameMoves[this.props.turn]["fields"]["d6"]}  />
+                <Square value="e6" piece={gameMoves[this.props.turn]["fields"]["e6"]}  />
+                <Square value="f6" piece={gameMoves[this.props.turn]["fields"]["f6"]}  />
+                <Square value="g6" piece={gameMoves[this.props.turn]["fields"]["g6"]}  />
+                <Square value="h6" piece={gameMoves[this.props.turn]["fields"]["h6"]}  />
+              </div>
+              <div>
+                <Square value="a5" piece={gameMoves[this.props.turn]["fields"]["a5"]}  />
+                <Square value="b5" piece={gameMoves[this.props.turn]["fields"]["b5"]}  />
+                <Square value="c5" piece={gameMoves[this.props.turn]["fields"]["c5"]}  />
+                <Square value="d5" piece={gameMoves[this.props.turn]["fields"]["d5"]}  />
+                <Square value="e5" piece={gameMoves[this.props.turn]["fields"]["e5"]}  />
+                <Square value="f5" piece={gameMoves[this.props.turn]["fields"]["f5"]}  />
+                <Square value="g5" piece={gameMoves[this.props.turn]["fields"]["g5"]}  />
+                <Square value="h5" piece={gameMoves[this.props.turn]["fields"]["h5"]}  />
+              </div>
+              <div>
+                <Square value="a4" piece={gameMoves[this.props.turn]["fields"]["a4"]}  />
+                <Square value="b4" piece={gameMoves[this.props.turn]["fields"]["b4"]}  />
+                <Square value="c4" piece={gameMoves[this.props.turn]["fields"]["c4"]}  />
+                <Square value="d4" piece={gameMoves[this.props.turn]["fields"]["d4"]}  />
+                <Square value="e4" piece={gameMoves[this.props.turn]["fields"]["e4"]}  />
+                <Square value="f4" piece={gameMoves[this.props.turn]["fields"]["f4"]} />
+                <Square value="g4" piece={gameMoves[this.props.turn]["fields"]["g4"]}  />
+                <Square value="h4" piece={gameMoves[this.props.turn]["fields"]["h4"]}  />
+              </div>
+              <div >
+                <Square value="a3" piece={gameMoves[this.props.turn]["fields"]["a3"]}  />
+                <Square value="b3" piece={gameMoves[this.props.turn]["fields"]["b3"]}  />
+                <Square value="c3" piece={gameMoves[this.props.turn]["fields"]["c3"]}  />
+                <Square value="d3" piece={gameMoves[this.props.turn]["fields"]["d3"]}  />
+                <Square value="e3" piece={gameMoves[this.props.turn]["fields"]["e3"]}  />
+                <Square value="f3" piece={gameMoves[this.props.turn]["fields"]["f3"]}  />
+                <Square value="g3" piece={gameMoves[this.props.turn]["fields"]["g3"]}  />
+                <Square value="h3" piece={gameMoves[this.props.turn]["fields"]["h3"]}  />
+              </div>
+              <div>
+                <Square value="a2" piece={gameMoves[this.props.turn]["fields"]["a2"]}  />
+                <Square value="b2" piece={gameMoves[this.props.turn]["fields"]["b2"]}  />
+                <Square value="c2" piece={gameMoves[this.props.turn]["fields"]["c2"]}  />
+                <Square value="d2" piece={gameMoves[this.props.turn]["fields"]["d2"]}  />
+                <Square value="e2" piece={gameMoves[this.props.turn]["fields"]["e2"]}  />
+                <Square value="f2" piece={gameMoves[this.props.turn]["fields"]["f2"]}  />
+                <Square value="g2" piece={gameMoves[this.props.turn]["fields"]["g2"]}  />
+                <Square value="h2" piece={gameMoves[this.props.turn]["fields"]["h2"]}  />
+              </div>
+              <div>
+                <Square value="a1" piece={gameMoves[this.props.turn]["fields"]["a1"]}  />
+                <Square value="b1" piece={gameMoves[this.props.turn]["fields"]["b1"]}  />
+                <Square value="c1" piece={gameMoves[this.props.turn]["fields"]["c1"]}  />
+                <Square value="d1" piece={gameMoves[this.props.turn]["fields"]["d1"]}  />
+                <Square value="e1" piece={gameMoves[this.props.turn]["fields"]["e1"]}  />
+                <Square value="f1" piece={gameMoves[this.props.turn]["fields"]["f1"]}  />
+                <Square value="g1" piece={gameMoves[this.props.turn]["fields"]["g1"]}  />
+                <Square value="h1" piece={gameMoves[this.props.turn]["fields"]["h1"]}  />
+              </div>
+            </div>
+          );
+        }
+      }
+
+      class Game extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {
+            turn: 0
+          }
+        }
+
+        forward = (event) => {
+          if (this.state.turn < gameMoves.length - 1) {
+            this.setState(state =>({ turn: state.turn + 1}));
+            turn += 1;
+          }
+        }
+
+        backward = (event) =>  {
+          if (this.state.turn > 0) {
+            this.setState(state =>({ turn: state.turn - 1}));
+            turn -= 1;
+          }
+        }
+
+        render() {
+          return (
+            <div>
+              <div class="game">
+                <Board turn={this.state.turn}/>
+                <div class = "checkmate">
+                  <checkmate> {{player1|safe}} vs. {{player2|safe}} </checkmate>
+                  <div class = "pgn">
+                  <checkmate> {{endComment|safe}} </checkmate>
+                    <pre> {{pgn|safe}} </pre>
+                  </div>
+                  <input onClick={this.backward} class="arrow" type="image" src="{% static 'play/left-arrow.png' %}"/>
+                  <input onClick={this.forward} class="arrow" type="image" src="{% static 'play/right-arrow.png' %}"/>
+                </div>
+              </div>
+
+            </div>
+          );
+        }
+      }
+
+      ReactDOM.render(<Game />, document.querySelector("#app"));
+
+    </script>
+  </body>
+</html>

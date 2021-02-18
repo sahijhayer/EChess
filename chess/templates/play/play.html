@@ -1,0 +1,2100 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="{% static 'play/style.css' %}">
+        <title>Play</title>
+    </head>
+    <nav class="navbar navbar-default navbar-expand-sm">
+      <a class="navbar-brand" href="{% url 'home' %}">
+        <img src="{% static 'play/logo.png' %}" class="logo d-inline-block align-top" width="35" height="35" alt="">
+      </a>
+      <a class="navbar-brand" href="{% url 'home' %}">
+        EChess
+      </a>
+      <span>
+        <p class="navbar-text">Signed in as {{request.user}}, <a href="{% url 'logout' %}" class="navbar-link">Logout</a></p>
+      </span>
+    </nav>
+    <body>
+      <div id="app">
+      </div>
+      <script type="text/babel">
+			const squares = {
+				a1: "dark",
+				a2: "light",
+				a3: "dark",
+				a4: "light",
+				a5: "dark",
+				a6: "light",
+				a7: "dark",
+				a8: "light",
+
+				b1: "light",
+				b2: "dark",
+				b3: "light",
+				b4: "dark",
+				b5: "light",
+				b6: "dark",
+				b7: "light",
+				b8: "dark",
+
+				c1: "dark",
+				c2: "light",
+				c3: "dark",
+				c4: "light",
+				c5: "dark",
+				c6: "light",
+				c7: "dark",
+				c8: "light",
+
+				d1: "light",
+				d2: "dark",
+				d3: "light",
+				d4: "dark",
+				d5: "light",
+				d6: "dark",
+				d7: "light",
+				d8: "dark",
+
+				e1: "dark",
+				e2: "light",
+				e3: "dark",
+				e4: "light",
+				e5: "dark",
+				e6: "light",
+				e7: "dark",
+				e8: "light",
+
+				f1: "light",
+				f2: "dark",
+				f3: "light",
+				f4: "dark",
+				f5: "light",
+				f6: "dark",
+				f7: "light",
+				f8: "dark",
+
+				g1: "dark",
+				g2: "light",
+				g3: "dark",
+				g4: "light",
+				g5: "dark",
+				g6: "light",
+				g7: "dark",
+				g8: "light",
+
+				h1: "light",
+				h2: "dark",
+				h3: "light",
+				h4: "dark",
+				h5: "light",
+				h6: "dark",
+				h7: "light",
+				h8: "dark",
+			}
+      const URL = "{% url 'play' %}";
+      window.CSRF_TOKEN = "{{ csrf_token }}";
+      var intermediateTurn = "";
+			let resign = false;
+      let gameStatus = "Waiting for Opponent..."
+      let myTurn = {{player|safe}};
+      let pgn = myTurn["pgn"];
+      let pgnCopy = pgn.slice(0, pgn.length);
+      let turn = myTurn["turn"];
+      let bCanCastle = myTurn["bCanCastle"];
+      let wCanCastle = myTurn["wCanCastle"];
+      let enPassant = myTurn["enPassant"];
+      let inCheck = myTurn["inCheck"];
+      let firstPlayer = myTurn["player1"];
+      let secondPlayer = myTurn["player2"];
+      myTurn = myTurn["playerTurn"][0];
+
+      if (secondPlayer != "false") {
+        gameStatus = firstPlayer + " vs. " + secondPlayer;
+      }
+      class Square extends React.Component {
+
+			  removeAll = () => {
+  				for (const property in this.props.data) {
+  					this.props.remove(property)
+  				}
+			  }
+
+			  move = (event) => {
+  				let piece;
+          let tempEnPassant;
+          let tempInCheck;
+          let tempTurn;
+          let tempWCastle = wCanCastle;
+          let tempBCastle = bCanCastle;
+          let tempPGN;
+          let tempCheckmate;
+  				const square1 = this.props.value;
+  				let square2;
+  				let newData = this.props.data;
+  				for (const property in this.props.data) {
+  					if (this.props.data[property][2] === true) {
+  						square2 = property;
+  						piece = this.props.data[property][0];
+  					}
+  				}
+
+  				this.removeAll();
+
+
+  				if (piece.substring(2,4) === "pa" && Math.abs(parseInt(square1[1]) - parseInt(square2[1])) === 2) {
+  					 tempEnPassant = square1;
+  				} else {
+  				   tempEnPassant = "false";
+  				}
+
+  				if (piece.substring(2,4) === "ro") {
+  					if (square2 === "a1") {
+  						tempWCastle = ["false", tempWCastle[1]];
+  					}
+  					else if (square2 === "h1") {
+  						tempWCastle = [tempWCastle[0], "false"];
+  					}
+
+  					else if (square2 === "a8") {
+  						tempBCastle = ["false", tempBCastle[1]];
+  					}
+  					else if (square2 === "h8") {
+  						tempBCastle = [tempBCastle[0], "false"];
+  					}
+  				}
+
+          if (piece.substring(2,4) === "kn") {
+            if (this.props.data[square1][0] != "") {
+              tempPGN= ("Nx".concat(square1)).concat(" ");
+            } else {
+              tempPGN = ("N".concat(square1)).concat(" ");
+            }
+          }
+          else if (piece.substring(2,4) === "bi") {
+            if (this.props.data[square1][0] != "") {
+              tempPGN = ("Bx".concat(square1)).concat(" ");
+            } else {
+              tempPGN = ("B".concat(square1)).concat(" ");
+            }
+          }
+          else if (piece.substring(2,4) === "ro") {
+            if (this.props.data[square1][0] != "") {
+              tempPGN = ("Rx".concat(square1)).concat(" ");
+            } else {
+              tempPGN = ("R".concat(square1)).concat(" ");
+            }
+          }
+          else if (piece.substring(2,4) === "qu") {
+            if (this.props.data[square1][0] != "") {
+              tempPGN = ("Qx".concat(square1)).concat(" ");
+            } else {
+              tempPGN = ("Q".concat(square1)).concat(" ");
+            }
+          }
+          else if (piece.substring(2,4) === "ki") {
+            if ((square1[0]).charCodeAt(0) - (square2[0]).charCodeAt(0) === 2) {
+              tempPGN = "O-O "
+            }
+            else if ((square1[0]).charCodeAt(0) - (square2[0]).charCodeAt(0) === -2) {
+              tempPGN = "O-O-O "
+            }
+            else if (this.props.data[square1][0] != "") {
+              tempPGN = ("Kx".concat(square1)).concat(" ");
+            } else {
+              tempPGN = ("K".concat(square1)).concat(" ");
+            }
+          }
+          else {
+            if (this.props.data[square1][0] != "") {
+              tempPGN = ((square2[0].concat("x")).concat(square1)).concat(" ");
+            } else {
+              tempPGN = square1.concat(" ");
+            }
+          }
+
+          if (enPassant != "false") {
+            if (square1 === enPassant[0].concat(parseInt(enPassant[1])+1) && piece.substring(0,4) === "w-pa") {
+              newData[enPassant] = ["", false, false];
+              tempPGN = square2[0] + "x" + tempPGN;
+            }
+            else if (square1 === enPassant[0].concat(parseInt(enPassant[1])-1) && piece.substring(0,4) === "b-pa") {
+              newData[enPassant] = ["", false, false];
+              tempPGN = square2[0] + "x" + tempPGN;
+            }
+          }
+
+          if (piece.substring(2,4) === "pa"){
+            if (square1[1] === "8") {
+              newData[square1] = [turn+"-queen", false, false];
+              tempPGN = tempPGN.substring(0, tempPGN.length-1) + "=Q ";
+            }
+            else if (square1[1] === "1") {
+              newData[square1] = [turn+"-queen", false, false];
+              tempPGN = tempPGN.substring(0, tempPGN.length-1) + "=Q ";
+            }
+          }
+
+  				if (piece.substring(2,4) === "ki") {
+  					if (square1 === "g1" && wCanCastle[1] === "true") {
+  						newData["f1"] = ["w-rook", false, false];
+  						newData["h1"] = ["", false, false];
+  					}
+
+  					if (square1 === "c1" && wCanCastle[0] === "true") {
+  						newData["d1"] = ["w-rook", false, false];
+  						newData["a1"] = ["", false, false];
+  					}
+
+  					if (square1 === "g8" && bCanCastle[1] === "true") {
+  						newData["f8"] = ["b-rook", false, false];
+  						newData["h8"] = ["", false, false];
+  					}
+
+  					if (square1 === "c8" && bCanCastle[0] === "true") {
+  						newData["d8"] = ["b-rook", false, false];
+  						newData["a8"] = ["", false, false];
+  					}
+  				}
+
+  				if (piece.substring(2,4) === "ki") {
+  					if (piece[0] === "w") {
+  						tempWCastle = ["false", "false"];
+  					}
+  					else if (piece[0] === "b") {
+  						tempBCastle = ["false", "false"];
+  					}
+  				}
+
+  				newData[square2] = ["", false, false];
+  				newData[square1] = [piece, false, false];
+
+          if (turn === "w") {
+            tempTurn = "b";
+          } else {
+            tempTurn = "w";
+          }
+
+  				if (this.check(tempTurn, newData) === true) {
+            tempInCheck = "true";
+            if (this.checkmate(tempTurn, newData, tempEnPassant) != true) {
+              tempPGN = tempPGN.substring(0, tempPGN.length-1) + "+ ";
+            }
+  				} else {
+  					tempInCheck = "false";
+  				}
+
+
+          if (this.checkmate(tempTurn, newData, tempEnPassant) === true) {
+            tempCheckmate = "true";
+          }
+          else if (this.checkmate(tempTurn, newData, tempEnPassant) === "stalemate") {
+            tempCheckmate = "stalemate";
+          }
+          else {
+            tempCheckmate = "false";
+          }
+
+          $.ajax({
+            type: "POST",
+            url: URL,
+            data: {
+              "piece": piece,
+              "square1": square1,
+              "square2": square2,
+              "turn": tempTurn,
+              "enPassant": tempEnPassant,
+              "inCheck": tempInCheck,
+              "wCastleLeft": tempWCastle[0],
+              "wCastleRight": tempWCastle[1],
+              "bCastleLeft": tempBCastle[0],
+              "bCastleRight": tempBCastle[1],
+              "pgn": tempPGN,
+              "checkmate": tempCheckmate,
+              csrfmiddlewaretoken: '{{ csrf_token }}'
+            }
+          });
+
+          this.props.makeMove(piece, square2, square1, tempCheckmate, tempPGN);
+          turn = tempTurn;
+          enPassant = tempEnPassant;
+          inCheck = tempInCheck;
+          wCanCastle = [tempWCastle[0], tempWCastle[1]];
+          bCanCastle = [tempBCastle[0], tempBCastle[1]];
+
+        }
+
+			  checkmate = (colour, data, tempEnPassant) => {
+
+  				for (const property in data) {
+  					if (data[property][0][0] === colour && data[property][0] != "") {
+  						if (data[property][0].substring(2, 4) === "kn") {
+  							let newSquares = this.knightData(data[property][0], property, data);
+  							for (let i = 0; i < newSquares.length; i++) {
+  								let newData = Object.assign({}, data);
+
+  								newData[newSquares[i]] = [data[property][0], false, false];
+  								newData[property] = ["", false, false];
+
+  								if (this.check(colour, newData) === false) {
+  									return false;
+  								}
+  							}
+  						}
+  						if (data[property][0].substring(2, 4) === "bi") {
+  							let newSquares = this.bishopData(data[property][0], property, data);
+  							for (let i = 0; i < newSquares.length; i++) {
+  								let newData = Object.assign({}, data);
+
+  								newData[newSquares[i]] = [data[property][0], false, false];
+  								newData[property] = ["", false, false];
+
+  								if (this.check(colour, newData) === false) {
+  									return false;
+  								}
+  							}
+  						}
+  						if (data[property][0].substring(2, 4) === "ro") {
+  							let newSquares = this.rookData(data[property][0], property, data);
+  							for (let i = 0; i < newSquares.length; i++) {
+  								let newData = Object.assign({}, data);
+
+  								newData[newSquares[i]] = [data[property][0], false, false];
+  								newData[property] = ["", false, false];
+
+  								if (this.check(colour, newData) === false) {
+  									return false;
+  								}
+  							}
+  						}
+  						if (data[property][0].substring(2, 4) === "qu") {
+  							let newSquares = this.queenData(data[property][0], property, data);
+  							for (let i = 0; i < newSquares.length; i++) {
+  								let newData = Object.assign({}, data);
+
+  								newData[newSquares[i]] = [data[property][0], false, false];
+  								newData[property] = ["", false, false];
+
+  								if (this.check(colour, newData) === false) {
+  									return false;
+  								}
+  							}
+  						}
+  						if (data[property][0].substring(2, 4) === "pa") {
+  						  let newSquares = this.pawnData(data[property][0], property, data, tempEnPassant);
+  							for (let i = 0; i < newSquares.length; i++) {
+  								let newData = Object.assign({}, data);
+
+  								newData[newSquares[i]] = [data[property][0], false, false];
+  								newData[property] = ["", false, false];
+
+                  if (tempEnPassant != "false") {
+                    if (newSquares[i] === tempEnPassant[0].concat(parseInt(tempEnPassant[1])+1) && colour === "w") {
+                      newData[tempEnPassant] = ["", false, false];
+
+                    }
+                    else if (newSquares[i] === tempEnPassant[0].concat(parseInt(tempEnPassant[1])-1) && colour === "b") {
+                      newData[tempEnPassant] = ["", false, false];
+
+                    }
+                  }
+
+  								if (this.check(colour, newData) === false) {
+  									return false;
+  								}
+  							}
+  						}
+  						if (data[property][0].substring(2, 4) === "ki") {
+  							let newSquares = this.kingData(data[property][0], property, data);
+  							for (let i = 0; i < newSquares.length; i++) {
+  								let newData = Object.assign({}, data);
+
+  								newData[newSquares[i]] = [data[property][0], false, false];
+  								newData[property] = ["", false, false];
+
+  								if (this.check(colour, newData) === false) {
+  									return false;
+  								}
+  							}
+  						}
+  					}
+  				}
+
+  				if (this.check(colour, data) === true) {
+  					return true;
+  				} else {
+  					return "stalemate";
+  				}
+			  }
+
+
+			  check = (colour, data) => {
+  				let squareLists = []
+  				let squares = []
+  				for (const property in data) {
+  					if (data[property][0][0] != colour && data[property][0] != "") {
+  						if (data[property][0].substring(2, 4) === "kn") {
+  							squareLists.push(this.knightData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "bi") {
+  							squareLists.push(this.bishopData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "ro") {
+  							squareLists.push(this.rookData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "qu") {
+  							squareLists.push(this.queenData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "pa") {
+  							squareLists.push(this.pawnData(data[property][0], property, data, enPassant));
+  						}
+  					}
+  				}
+
+  				for (let i = 0; i < squareLists.length; i++) {
+  					squares = squares.concat(squareLists[i]);
+  				}
+
+  				for (let j = 0; j < squares.length; j++) {
+  					if (data[squares[j]][0].substring(0,4) === colour.concat("-ki")) {
+  						return true;
+  					}
+  				}
+
+  				return false;
+
+			  }
+
+			  targeted = (colour, data, square) => {
+  				let squareLists = []
+  				let squares = []
+  				for (const property in data) {
+  					if (data[property][0][0] != colour && data[property][0] != "") {
+  						if (data[property][0].substring(2, 4) === "kn") {
+  							squareLists.push(this.knightData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "bi") {
+  							squareLists.push(this.bishopData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "ro") {
+  							squareLists.push(this.rookData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "qu") {
+  							squareLists.push(this.queenData(data[property][0], property, data));
+  						}
+  						if (data[property][0].substring(2, 4) === "pa") {
+  							squareLists.push(this.pawnData(data[property][0], property, data, enPassant));
+  						}
+  					}
+  				}
+
+  				for (let i = 0; i < squareLists.length; i++) {
+  					squares = squares.concat(squareLists[i]);
+  				}
+
+  				for (let j = 0; j < squares.length; j++) {
+  					if (squares[j] === square) {
+  						return true;
+  					}
+  				}
+
+  				return false;
+
+			  }
+
+
+			  king = (event) => {
+  				const squares = this.kingData(this.props.piece, this.props.value, this.props.data);
+  				let output = []
+  				this.removeAll();
+  				this.props.select(this.props.value);
+  				const colour = this.props.piece[0][0];
+
+
+  				for (let i = 0; i < squares.length; i++) {
+  					let newData = Object.assign({}, this.props.data);
+
+  					newData[squares[i]] = [this.props.piece[0], false, false];
+  					newData[this.props.value] = ["", false, false];
+
+  					if (this.check(colour, newData) === false) {
+  						output.push(squares[i]);
+  					}
+  				}
+
+
+  				if (turn === colour && turn === myTurn && resign === false) {
+  					for (let i = 0; i < output.length; i++) {
+  						this.props.change(output[i]);
+  					}
+  				}
+	      }
+
+
+			  kingData = (piece, value, data) => {
+  				const colour = piece[0][0];
+  				const letter = value[0];
+  				const number = parseInt(value[1]);
+  				let squares = [];
+  				let output = [];
+
+  				if (colour === "w" && wCanCastle[1] === "true" && inCheck === "false" && data["f1"][0] === "" && data["g1"][0] === "" && this.targeted("w", this.props.data, "f1") === false && this.targeted("w", this.props.data, "g1") === false) {
+  					squares.push("g1");
+  				}
+
+  				if (colour === "w" && wCanCastle[0] === "true" && inCheck === "false" && data["c1"][0] === "" && data["d1"][0] === "" && data["b1"][0] === "" && this.targeted("w", this.props.data, "d1") === false && this.targeted("w", this.props.data, "c1") === false) {
+  					squares.push("c1");
+  				}
+
+  				if (colour === "b" && bCanCastle[1] === "true" && inCheck === "false" && data["f8"][0] === "" && data["g8"][0] === "" && this.targeted("b", this.props.data, "f8") === false && this.targeted("b", this.props.data, "g8") === false) {
+  					squares.push("g8");
+  				}
+
+  				if (colour === "b" && bCanCastle[0] === "true" && inCheck === "false" && data["c8"][0] === "" && data["d8"][0] === "" && data["b8"][0] === "" && this.targeted("b", this.props.data, "d8") === false && this.targeted("b", this.props.data, "c8") === false) {
+  					squares.push("c8");
+  				}
+
+  				if (letter != "a") {
+  					squares.push(String.fromCharCode(letter.charCodeAt(0)-1).concat(number));
+
+  					if (number != 8) {
+  						squares.push(String.fromCharCode(letter.charCodeAt(0)-1).concat(number+1));
+  					}
+
+  					if (number != 1) {
+  						squares.push(String.fromCharCode(letter.charCodeAt(0)-1).concat(number-1));
+  					}
+  				}
+
+  				if (letter != "h") {
+  					squares.push(String.fromCharCode(letter.charCodeAt(0)+1).concat(number));
+
+  					if (number != 8) {
+  						squares.push(String.fromCharCode(letter.charCodeAt(0)+1).concat(number+1));
+  					}
+
+  					if (number != 1) {
+  						squares.push(String.fromCharCode(letter.charCodeAt(0)+1).concat(number-1));
+  					}
+  				}
+
+  				if (number != 8) {
+  					squares.push(letter.concat(number+1));
+  				}
+
+  				if (number != 1) {
+  					squares.push(letter.concat(number-1));
+  				}
+
+  				for (let i = 0; i < squares.length; i++) {
+  					if (data[squares[i]][0][0] != colour){
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				return output;
+
+  			}
+
+
+			  queen = (event) => {
+  				const squares = this.queenData(this.props.piece, this.props.value, this.props.data);
+  				let output = [];
+  				this.removeAll();
+  				this.props.select(this.props.value);
+  				const colour = this.props.piece[0][0];
+
+  				for (let i = 0; i < squares.length; i++) {
+  					let newData = Object.assign({}, this.props.data);
+
+  					newData[squares[i]] = [this.props.piece[0], false, false];
+  					newData[this.props.value] = ["", false, false];
+
+  					if (this.check(colour, newData) === false) {
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				if (turn === colour && turn === myTurn && resign === false) {
+  					for (let i = 0; i < output.length; i++) {
+  						this.props.change(output[i]);
+  					}
+  				}
+  	    }
+
+			  queenData = (piece, value, data) => {
+  				const colour = piece[0][0];
+  				const letter = value[0];
+  				const number = parseInt(value[1]);
+  				let squares = [];
+  				let output = [];
+
+  				let numberCounter = number + 1;
+
+  				while (numberCounter <= 8) {
+  					if (data[letter.concat(numberCounter)][0] === "") {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter += 1;
+  					} else {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter = 9;
+  					}
+  				}
+
+  				numberCounter = number - 1;
+
+  				while (numberCounter >= 1) {
+  					if (data[letter.concat(numberCounter)][0] === "") {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter -= 1;
+  					} else {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter = 0;
+  					}
+  				}
+
+  				let letterCounter = String.fromCharCode(letter.charCodeAt(0)+1);
+
+  				while (letterCounter <= "h") {
+  					if (data[letterCounter.concat(number)][0] === "") {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)+1);
+  					} else {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = "i";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)-1);
+
+  				while (letterCounter >= "a") {
+  					if (data[letterCounter.concat(number)][0] === "") {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)-1);
+  					} else {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = "`";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)+1);
+  				numberCounter = number + 1;
+
+  				while (letterCounter <= "h" && numberCounter <= 8) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)+1);
+  						numberCounter += 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = "i";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)-1);
+  				numberCounter = number - 1;
+
+  				while (letterCounter >= "a" && numberCounter >= 1) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)-1);
+  						numberCounter -= 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						numberCounter = 0;
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)+1);
+  				numberCounter = number - 1;
+
+  				while (letterCounter <= "h" && numberCounter >= 1) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)+1);
+  						numberCounter -= 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = "i";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)-1);
+  				numberCounter = number + 1;
+
+  				while (letterCounter >= "a" && numberCounter <= 8) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)-1);
+  						numberCounter += 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						numberCounter = 9;
+  					}
+  				}
+
+  				for (let i = 0; i < squares.length; i++) {
+  					if (data[squares[i]][0][0] != colour){
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				return output;
+
+  			}
+
+			  rook = (event) => {
+  				const squares = this.rookData(this.props.piece, this.props.value, this.props.data);
+  				let output = [];
+  				this.removeAll();
+  				this.props.select(this.props.value);
+  				const colour = this.props.piece[0][0];
+
+  				for (let i = 0; i < squares.length; i++) {
+  					let newData = Object.assign({}, this.props.data);
+
+  					newData[squares[i]] = [this.props.piece[0], false, false];
+  					newData[this.props.value] = ["", false, false];
+
+  					if (this.check(colour, newData) === false) {
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				if (turn === colour && turn === myTurn && resign === false) {
+  					for (let i = 0; i < output.length; i++) {
+  						this.props.change(output[i]);
+  					}
+  				}
+  	    }
+
+			  rookData = (piece, value, data) => {
+  				const colour = piece[0][0];
+  				const letter = value[0];
+  				const number = parseInt(value[1]);
+  				let squares = [];
+  				let output = [];
+
+  				let numberCounter = number + 1;
+
+  				while (numberCounter <= 8) {
+  					if (data[letter.concat(numberCounter)][0] === "") {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter += 1;
+  					} else {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter = 9;
+  					}
+  				}
+
+  				numberCounter = number - 1;
+
+  				while (numberCounter >= 1) {
+  					if (data[letter.concat(numberCounter)][0] === "") {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter -= 1;
+  					} else {
+  						squares.push(letter.concat(numberCounter));
+  						numberCounter = 0;
+  					}
+  				}
+
+  				let letterCounter = String.fromCharCode(letter.charCodeAt(0)+1);
+
+  				while (letterCounter <= "h") {
+  					if (data[letterCounter.concat(number)][0] === "") {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)+1);
+  					} else {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = "i";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)-1);
+
+  				while (letterCounter >= "a") {
+  					if (data[letterCounter.concat(number)][0] === "") {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)-1);
+  					} else {
+  						squares.push(letterCounter.concat(number));
+  						letterCounter = "`";
+  					}
+  				}
+
+  				for (let i = 0; i < squares.length; i++) {
+  					if (data[squares[i]][0][0] != colour){
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				return output;
+
+  			}
+
+			  knight = (event) => {
+  				const squares = this.knightData(this.props.piece, this.props.value, this.props.data);
+  				let output = [];
+  				this.removeAll();
+  				this.props.select(this.props.value);
+  				const colour = this.props.piece[0][0];
+
+  				for (let i = 0; i < squares.length; i++) {
+  					let newData = Object.assign({}, this.props.data);
+
+  					newData[squares[i]] = [this.props.piece[0], false, false];
+  					newData[this.props.value] = ["", false, false];
+
+  					if (this.check(colour, newData) === false) {
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				if (turn === colour && turn === myTurn && resign === false) {
+  					for (let i = 0; i < output.length; i++) {
+  						this.props.change(output[i]);
+  					}
+  				}
+	      }
+
+			  knightData = (piece, value, data) => {
+  				const colour = piece[0][0];
+  				const letter = value[0];
+  				const number = parseInt(value[1]);
+  				let squares = [];
+  				let output = [];
+
+
+  				if (number < 7 && letter != "h") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)+1).concat((number+2).toString())));
+  				}
+
+  				if (number < 8 && letter != "g" && letter != "h") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)+2).concat((number+1).toString())));
+  				}
+
+  				if (number > 1 && letter != "g" && letter != "h") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)+2).concat((number-1).toString())));
+  				}
+
+  				if (number > 2 && letter != "h") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)+1).concat((number-2).toString())));
+  				}
+
+  				if (number < 7 && letter != "a") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)-1).concat((number+2).toString())));
+  				}
+
+  				if (number < 8 && letter != "a" && letter != "b") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)-2).concat((number+1).toString())));
+  				}
+
+  				if (number > 1 && letter != "a" && letter != "b") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)-2).concat((number-1).toString())));
+  				}
+
+  				if (number > 2 && letter != "a") {
+  					squares.push((String.fromCharCode(letter.charCodeAt(0)-1).concat((number-2).toString())));
+  				}
+
+  				for (let i = 0; i < squares.length; i++) {
+  					if (data[squares[i]][0][0] != colour){
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				return output;
+
+
+			  };
+
+			  pawn = (event) => {
+  				const squares = this.pawnData(this.props.piece, this.props.value, this.props.data, enPassant);
+  				let output = []
+  				this.removeAll();
+  				this.props.select(this.props.value);
+  				const colour = this.props.piece[0][0];
+
+  				for (let i = 0; i < squares.length; i++) {
+  					let newData = Object.assign({}, this.props.data);
+
+  					newData[squares[i]] = [this.props.piece[0], false, false];
+  					newData[this.props.value] = ["", false, false];
+
+            if (enPassant != "false") {
+              if (squares[i] === enPassant[0].concat(parseInt(enPassant[1])+1) && colour === "w") {
+                newData[enPassant] = ["", false, false];
+              }
+              else if (squares[i] === enPassant[0].concat(parseInt(enPassant[1])-1) && colour === "b") {
+                newData[enPassant] = ["", false, false];
+              }
+            }
+
+  					if (this.check(colour, newData) === false) {
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				if (turn === colour && turn === myTurn && resign === false) {
+  					for (let i = 0; i < output.length; i++) {
+  						this.props.change(output[i]);
+  					}
+  				}
+  	    }
+
+			  pawnData = (piece, value, data, enPassantVal) => {
+  				const colour = piece[0][0];
+  				if (colour === "w") {
+  					const letter = value[0];
+  					const number = parseInt(value[1]);
+  					let squares = [];
+  					let output = []
+
+  					if (enPassantVal != "false") {
+  						if (String.fromCharCode(letter.charCodeAt(0)+1).concat(number) === enPassantVal) {
+  							squares.push(String.fromCharCode(letter.charCodeAt(0)+1).concat(number+1));
+  						}
+  						if (String.fromCharCode(letter.charCodeAt(0)-1).concat(number) === enPassantVal) {
+  							squares.push(String.fromCharCode(letter.charCodeAt(0)-1).concat(number+1));
+  						}
+  					}
+
+
+  					if (number < 8 && data[letter.concat((number+1).toString())][0] === "") {
+  						squares.push(letter.concat((number+1).toString()));
+
+  						if (number === 2 && data[letter.concat((number+2).toString())][0] === "") {
+  							squares.push(letter.concat((number+2).toString()));
+  						}
+
+  					}
+
+  					if (number < 8 && letter < "h" && data[(String.fromCharCode(letter.charCodeAt(0)+1).concat((number+1)))][0] != "") {
+  						squares.push((String.fromCharCode(letter.charCodeAt(0)+1).concat((number+1))));
+  					}
+
+  					if (number < 8 && letter > "a" && data[(String.fromCharCode(letter.charCodeAt(0)-1).concat((number+1)))][0] != "") {
+  						squares.push((String.fromCharCode(letter.charCodeAt(0)-1).concat((number+1))));
+  					}
+
+  					for (let i = 0; i < squares.length; i++) {
+  						if (data[squares[i]][0][0] != colour){
+  							output.push(squares[i]);
+  						}
+  					}
+
+  					return output;
+
+  				} else {
+  					const letter = value[0];
+  					const number = parseInt(value[1]);
+  					let squares = [];
+  					let output = [];
+
+  					if (enPassantVal != "false") {
+  						if (String.fromCharCode(letter.charCodeAt(0)+1).concat(number) === enPassantVal) {
+  							squares.push(String.fromCharCode(letter.charCodeAt(0)+1).concat(number-1));
+  						}
+  						if (String.fromCharCode(letter.charCodeAt(0)-1).concat(number) === enPassantVal) {
+  							squares.push(String.fromCharCode(letter.charCodeAt(0)-1).concat(number-1));
+  						}
+  					}
+
+  					if (number > 1 && data[letter.concat((number-1).toString())][0] === "") {
+  						squares.push(letter.concat((number-1).toString()));
+
+  						if (number === 7 && data[letter.concat((number-2).toString())][0] === "") {
+  							squares.push(letter.concat((number-2).toString()));
+  						}
+  					}
+
+  					if (number > 1 && letter < "h" && data[(String.fromCharCode(letter.charCodeAt(0)+1).concat((number-1)))][0] != "") {
+  						squares.push((String.fromCharCode(letter.charCodeAt(0)+1).concat((number-1))));
+  					}
+
+  					if (number > 1 && letter > "a" && data[(String.fromCharCode(letter.charCodeAt(0)-1).concat((number-1)))][0] != "") {
+  						squares.push((String.fromCharCode(letter.charCodeAt(0)-1).concat((number-1))));
+  					}
+
+  					for (let i = 0; i < squares.length; i++) {
+  						if (data[squares[i]][0][0] != colour){
+  							output.push(squares[i]);
+  						}
+  					}
+
+  					return output;
+  				}
+
+			  }
+
+			  bishop = (event) => {
+  				const squares = this.bishopData(this.props.piece, this.props.value, this.props.data);
+  				let output = []
+  				this.removeAll();
+  				this.props.select(this.props.value);
+  				const colour = this.props.piece[0][0];
+
+  				for (let i = 0; i < squares.length; i++) {
+  					let newData = Object.assign({}, this.props.data);
+
+  					newData[squares[i]] = [this.props.piece[0], false, false];
+  					newData[this.props.value] = ["", false, false];
+
+  					if (this.check(colour, newData) === false) {
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				if (turn === colour && turn === myTurn && resign === false) {
+  					for (let i = 0; i < output.length; i++) {
+  						this.props.change(output[i]);
+  					}
+  				}
+  	    }
+
+
+			  bishopData = (piece, value, data) => {
+  				const colour = piece[0][0];
+  				const letter = value[0];
+  				const number = parseInt(value[1]);
+  				let squares = [];
+  				let output = [];
+
+  				let letterCounter = String.fromCharCode(letter.charCodeAt(0)+1);
+  				let numberCounter = number + 1;
+
+  				while (letterCounter <= "h" && numberCounter <= 8) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)+1);
+  						numberCounter += 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = "i";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)-1);
+  				numberCounter = number - 1;
+
+  				while (letterCounter >= "a" && numberCounter >= 1) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)-1);
+  						numberCounter -= 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						numberCounter = 0;
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)+1);
+  				numberCounter = number - 1;
+
+  				while (letterCounter <= "h" && numberCounter >= 1) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)+1);
+  						numberCounter -= 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = "i";
+  					}
+  				}
+
+  				letterCounter = String.fromCharCode(letter.charCodeAt(0)-1);
+  				numberCounter = number + 1;
+
+  				while (letterCounter >= "a" && numberCounter <= 8) {
+  					if (data[letterCounter.concat(numberCounter)][0] === "") {
+  						squares.push(letterCounter.concat(numberCounter));
+  						letterCounter = String.fromCharCode(letterCounter.charCodeAt(0)-1);
+  						numberCounter += 1;
+  					} else {
+  						squares.push(letterCounter.concat(numberCounter));
+  						numberCounter = 9;
+  					}
+  				}
+
+  				for (let i = 0; i < squares.length; i++) {
+  					if (data[squares[i]][0][0] != colour){
+  						output.push(squares[i]);
+  					}
+  				}
+
+  				return output;
+
+			  }
+
+			  render() {
+  				if (this.props.piece[1] === false) {
+  					if (squares[this.props.value] === "light") {
+  						if (this.props.piece[0] === "w-rook") {
+  							return (
+  								<input onClick={this.rook} class="but" type="image" src="{% static 'play/pieces/w-rook-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-bishop") {
+  							return (
+  								<input onClick={this.bishop} class="but" type="image" src="{% static 'play/pieces/w-bishop-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-knight") {
+  							return (
+  								<input onClick={this.knight} class="but" type="image" src="{% static 'play/pieces/w-knight-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-queen") {
+  							return (
+  								<input onClick={this.queen} class="but" type="image" src="{% static 'play/pieces/w-queen-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-king") {
+  							if (inCheck === "false" || turn === "b") {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-king-light.png' %}" />
+  								);
+  							} else {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-check-light.png' %}" />
+  								);
+  							}
+  						}
+  						if (this.props.piece[0] === "w-pawn") {
+  							return (
+  								<input onClick={this.pawn} class="but" type="image" src="{% static 'play/pieces/w-pawn-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "") {
+  							return (
+  								<input class="nopiece" type="image" src="{% static 'play/pieces/light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-rook") {
+  							return (
+  								<input onClick={this.rook} class="but" type="image" src="{% static 'play/pieces/b-rook-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-knight") {
+  							return (
+  								<input onClick={this.knight} class="but" type="image" src="{% static 'play/pieces/b-knight-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-bishop") {
+  							return (
+  								<input onClick={this.bishop} class="but" type="image" src="{% static 'play/pieces/b-bishop-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-king") {
+  							if (inCheck === "false" || turn === "w") {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-king-light.png' %}" />
+  								);
+  							} else {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-check-light.png' %}" />
+  								);
+  							}
+  						}
+  						if (this.props.piece[0] === "b-queen") {
+  							return (
+  								<input onClick={this.queen} class="but" type="image" src="{% static 'play/pieces/b-queen-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-pawn") {
+  							return (
+  								<input onClick={this.pawn} class="but" type="image" src="{% static 'play/pieces/b-pawn-light.png' %}" />
+  							);
+  						}
+
+  					} else {
+  						if (this.props.piece[0] === "w-rook") {
+  							return (
+  								<input onClick={this.rook} class="but" type="image" src="{% static 'play/pieces/w-rook-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-bishop") {
+  							return (
+  								<input onClick={this.bishop} class="but" type="image" src="{% static 'play/pieces/w-bishop-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-knight") {
+  							return (
+  								<input onClick={this.knight} class="but" type="image" src="{% static 'play/pieces/w-knight-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-queen") {
+  							return (
+  								<input onClick={this.queen} class="but" type="image" src="{% static 'play/pieces/w-queen-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-king") {
+  							if (inCheck === "false" || turn === "b") {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-king-dark.png' %}" />
+  								);
+  							} else {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/w-check-dark.png' %}" />
+  								);
+  							}
+  						}
+  						if (this.props.piece[0] === "w-pawn") {
+  							return (
+  								<input onClick={this.pawn} class="but" type="image" src="{% static 'play/pieces/w-pawn-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "") {
+  							return (
+  								<input class="nopiece" type="image" src="{% static 'play/pieces/dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-rook") {
+  							return (
+  								<input onClick={this.rook} class="but" type="image" src="{% static 'play/pieces/b-rook-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-knight") {
+  							return (
+  								<input onClick={this.knight} class="but" type="image" src="{% static 'play/pieces/b-knight-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-bishop") {
+  							return (
+  								<input onClick={this.bishop} class="but" type="image" src="{% static 'play/pieces/b-bishop-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-king") {
+  							if (inCheck === "false" || turn === "w") {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-king-dark.png' %}" />
+  								);
+  							} else {
+  								return (
+  									<input onClick={this.king} class="but" type="image" src="{% static 'play/pieces/b-check-dark.png' %}" />
+  								);
+  							}
+  						}
+  						if (this.props.piece[0] === "b-queen") {
+  							return (
+  								<input onClick={this.queen} class="but" type="image" src="{% static 'play/pieces/b-queen-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-pawn") {
+  							return (
+  								<input onClick={this.pawn} class="but" type="image" src="{% static 'play/pieces/b-pawn-dark.png' %}" />
+  							);
+  						}
+  					}
+  				} else {
+  					if (squares[this.props.value] === "light") {
+  						if (this.props.piece[0] === "w-rook") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-rook-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-bishop") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-bishop-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-knight") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-knight-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-queen") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-queen-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-king") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-king-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-pawn") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-pawn-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "") {
+  							return (
+  								<input onClick={this.move} class="nopiece-selectable" type="image" src="{% static 'play/pieces/light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-rook") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-rook-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-knight") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-knight-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-bishop") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-bishop-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-king") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-king-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-queen") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-queen-light.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-pawn") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-pawn-light.png' %}" />
+  							);
+  						}
+
+  					} else {
+  						if (this.props.piece[0] === "w-rook") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-rook-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-bishop") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-bishop-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-knight") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-knight-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-queen") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-queen-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-king") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-king-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "w-pawn") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/w-pawn-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "") {
+  							return (
+  								<input onClick={this.move} class="nopiece-selectable" type="image" src="{% static 'play/pieces/dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-rook") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-rook-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-knight") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-knight-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-bishop") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-bishop-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-king") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-king-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-queen") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-queen-dark.png' %}" />
+  							);
+  						}
+  						if (this.props.piece[0] === "b-pawn") {
+  							return (
+  								<input onClick={this.move} class="but-selectable" type="image" src="{% static 'play/pieces/b-pawn-dark.png' %}" />
+  							);
+  						}
+  					}
+  				}
+			  }
+
+			}
+
+
+
+			class Board extends React.Component {
+
+        constructor(props) {
+          super(props);
+  				this.changeSelectable = this.changeSelectable.bind(this);
+  				this.changeToSelected = this.changeToSelected.bind(this);
+  				this.move = this.move.bind(this);
+  				this.removeSelected = this.removeSelected.bind(this);
+          this.state = {
+              a1: [this.props.gameData["a1"], false, false],
+    					a2: [this.props.gameData["a2"], false, false],
+    					a3: [this.props.gameData["a3"], false, false],
+    					a4: [this.props.gameData["a4"], false, false],
+    					a5: [this.props.gameData["a5"], false, false],
+    					a6: [this.props.gameData["a6"], false, false],
+    					a7: [this.props.gameData["a7"], false, false],
+    					a8: [this.props.gameData["a8"], false, false],
+
+    					b1: [this.props.gameData["b1"], false, false],
+    					b2: [this.props.gameData["b2"], false, false],
+    					b3: [this.props.gameData["b3"], false, false],
+    					b4: [this.props.gameData["b4"], false, false],
+    					b5: [this.props.gameData["b5"], false, false],
+    					b6: [this.props.gameData["b6"], false, false],
+    					b7: [this.props.gameData["b7"], false, false],
+    					b8: [this.props.gameData["b8"], false, false],
+
+    					c1: [this.props.gameData["c1"], false, false],
+    					c2: [this.props.gameData["c2"], false, false],
+    					c3: [this.props.gameData["c3"], false, false],
+    					c4: [this.props.gameData["c4"], false, false],
+    					c5: [this.props.gameData["c5"], false, false],
+    					c6: [this.props.gameData["c6"], false, false],
+    					c7: [this.props.gameData["c7"], false, false],
+    					c8: [this.props.gameData["c8"], false, false],
+
+    					d1: [this.props.gameData["d1"], false, false],
+    					d2: [this.props.gameData["d2"], false, false],
+    					d3: [this.props.gameData["d3"], false, false],
+    					d4: [this.props.gameData["d4"], false, false],
+    					d5: [this.props.gameData["d5"], false, false],
+    					d6: [this.props.gameData["d6"], false, false],
+    					d7: [this.props.gameData["d7"], false, false],
+    					d8: [this.props.gameData["d8"], false, false],
+
+    					e1: [this.props.gameData["e1"], false, false],
+    					e2: [this.props.gameData["e2"], false, false],
+    					e3: [this.props.gameData["e3"], false, false],
+    					e4: [this.props.gameData["e4"], false, false],
+    					e5: [this.props.gameData["e5"], false, false],
+    					e6: [this.props.gameData["e6"], false, false],
+    					e7: [this.props.gameData["e7"], false, false],
+    					e8: [this.props.gameData["e8"], false, false],
+
+    					f1: [this.props.gameData["f1"], false, false],
+    					f2: [this.props.gameData["f2"], false, false],
+    					f3: [this.props.gameData["f3"], false, false],
+    					f4: [this.props.gameData["f4"], false, false],
+    					f5: [this.props.gameData["f5"], false, false],
+    					f6: [this.props.gameData["f6"], false, false],
+    					f7: [this.props.gameData["f7"], false, false],
+    					f8: [this.props.gameData["f8"], false, false],
+
+    					g1: [this.props.gameData["g1"], false, false],
+    					g2: [this.props.gameData["g2"], false, false],
+    					g3: [this.props.gameData["g3"], false, false],
+    					g4: [this.props.gameData["g4"], false, false],
+    					g5: [this.props.gameData["g5"], false, false],
+    					g6: [this.props.gameData["g6"], false, false],
+    					g7: [this.props.gameData["g7"], false, false],
+    					g8: [this.props.gameData["g8"], false, false],
+
+    					h1: [this.props.gameData["h1"], false, false],
+    					h2: [this.props.gameData["h2"], false, false],
+    					h3: [this.props.gameData["h3"], false, false],
+    					h4: [this.props.gameData["h4"], false, false],
+    					h5: [this.props.gameData["h5"], false, false],
+    					h6: [this.props.gameData["h6"], false, false],
+    					h7: [this.props.gameData["h7"], false, false],
+    					h8: [this.props.gameData["h8"], false, false],
+
+              };
+          }
+
+        componentDidMount() {
+          this.timer = setInterval(()=> this.getItems(), 5000);
+        }
+
+        componentWillUnmount() {
+          this.timer = null;
+        }
+
+        endTimer() {
+          clearInterval(this.timer);
+        }
+
+        getItems() {
+          $.ajax({
+            type: "GET",
+            url: URL,
+            success: function(response){
+              window.response = response;
+            }
+          });
+          if (turn != myTurn && pgn.length < response["pgn"].length) {
+            if (response["piece"] != "false") {
+              let piece = response["piece"];
+              const colour = piece[0];
+              const square1 = response["square1"];
+              const square2 = response["square2"];
+
+              if (piece.substring(2,4) === "pa" && (square1[1] === "8" || square1[1] === "1")) {
+      					piece = colour.concat("-queen");
+      				}
+
+      				if (enPassant != "false") {
+      					if (square1 === enPassant[0].concat(parseInt(enPassant[1])+1) && piece.substring(0,4) === "w-pa") {
+      						this.setState({ [enPassant]: ["", false, false] });
+      					}
+      					else if (square1 === enPassant[0].concat(parseInt(enPassant[1])-1) && piece.substring(0,4) === "b-pa") {
+      						this.setState({ [enPassant]: ["", false, false] });
+      					}
+      				}
+
+              if (piece.substring(2,4) === "ki") {
+                if (square1 === "g1" && wCanCastle[1] === "true") {
+                  this.setState({ "f1": ["w-rook", false, false] });
+                  this.setState({ "h1": ["", false, false] });
+                }
+
+                if (square1 === "c1" && wCanCastle[0] === "true") {
+                  this.setState({ "d1": ["w-rook", false, false] });
+                  this.setState({ "a1": ["", false, false] });
+                }
+
+                if (square1 === "g8" && bCanCastle[1] === "true") {
+                  this.setState({ "f8": ["b-rook", false, false] });
+                  this.setState({ "h8": ["", false, false] });
+                }
+
+                if (square1 === "c8" && bCanCastle[0] === "true") {
+                  this.setState({ "d8": ["b-rook", false, false] });
+                  this.setState({ "a8": ["", false, false] });
+                }
+              }
+
+              enPassant = response["enPassant"];
+              inCheck = response["inCheck"];
+              turn = response["turn"];
+              pgn = response["pgn"];
+              this.props.update(pgn);
+              wCanCastle = [response["wCastleLeft"], response["wCastleRight"]];
+              bCanCastle = [response["bCastleLeft"], response["bCastleRight"]];
+
+              this.setState({ [square2]: ["", false, false] });
+              this.setState({ [square1]: [piece, false, false] });
+
+
+
+            }
+          }
+          this.props.checkOffer(response["checkmate"]);
+          this.props.player(response["player1"], response["player2"]);
+          if (response["checkmate"] === "true"){
+              this.props.isCheckmate();
+              this.endTimer();
+              pgn = response["pgn"];
+              this.props.update(pgn);
+          } else if (response["checkmate"] === "stalemate") {
+              this.props.isStalemate();
+              this.endTimer();
+              pgn = response["pgn"];
+              this.props.update(pgn);
+          } else if (response["checkmate"] === "resign") {
+              this.props.isResign(response["loser"]);
+              this.endTimer();
+              pgn = response["pgn"];
+              this.props.update(pgn);
+          } else if (response["checkmate"] === "draw") {
+              this.props.draw();
+              this.endTimer();
+              pgn = response["pgn"];
+              this.props.update(pgn);
+          }
+
+        }
+
+
+			  changeSelectable(square) {
+				      this.setState(state =>({ [square]: [state[square][0], true, false] }));
+			  }
+
+			  removeSelected(square) {
+				      this.setState(state =>({ [square]: [state[square][0], false, false] }));
+			  }
+
+			  changeToSelected(square) {
+  				this.setState(state=>({ [square]: [state[square][0], false, true] }));
+  			}
+
+  			move(piece, square1, square2, checkmate, tempPGN) {
+
+          this.setState({ [square2]: [piece, false, false] });
+          this.setState({ [square1]: ["", false, false] });
+
+          if (myTurn === "w") {
+            pgn.push((Math.ceil(pgn.length/2)+1).toString() + ". " + tempPGN);
+          } else {
+            pgn.push(tempPGN);
+          }
+
+
+  				if (checkmate === "true") {
+  					this.props.isCheckmate();
+            pgn[pgn.length-1] = pgn[pgn.length-1].substring(0, pgn[pgn.length-1].length-1);
+            if (turn === "b") {
+              pgn.push("# 0-1");
+            } else {
+              pgn.push("# 1-0");
+            }
+  				}
+  				else if (checkmate === "stalemate") {
+  					this.props.isStalemate();
+  				}
+          this.props.update(pgn);
+			  }
+
+			  render() {
+				if (this.props.colour === "w") {
+					return (
+					  <div class="flex-container">
+						<div>
+							<Square value="a8" piece={this.state.a8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b8" piece={this.state.b8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c8" piece={this.state.c8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d8" piece={this.state.d8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e8" piece={this.state.e8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f8" piece={this.state.f8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g8" piece={this.state.g8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h8" piece={this.state.h8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+
+						</div>
+						<div>
+							<Square value="a7" piece={this.state.a7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b7" piece={this.state.b7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c7" piece={this.state.c7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d7" piece={this.state.d7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e7" piece={this.state.e7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f7" piece={this.state.f7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g7" piece={this.state.g7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h7" piece={this.state.h7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+						<div>
+							<Square value="a6" piece={this.state.a6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b6" piece={this.state.b6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c6" piece={this.state.c6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d6" piece={this.state.d6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e6" piece={this.state.e6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f6" piece={this.state.f6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g6" piece={this.state.g6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h6" piece={this.state.h6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+						<div>
+							<Square value="a5" piece={this.state.a5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b5" piece={this.state.b5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c5" piece={this.state.c5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d5" piece={this.state.d5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e5" piece={this.state.e5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f5" piece={this.state.f5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move}data={this.state} />
+							<Square value="g5" piece={this.state.g5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h5" piece={this.state.h5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+						<div>
+							<Square value="a4" piece={this.state.a4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b4" piece={this.state.b4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c4" piece={this.state.c4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d4" piece={this.state.d4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e4" piece={this.state.e4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f4" piece={this.state.f4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g4" piece={this.state.g4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h4" piece={this.state.h4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+						<div >
+							<Square value="a3" piece={this.state.a3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b3" piece={this.state.b3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c3" piece={this.state.c3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d3" piece={this.state.d3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e3" piece={this.state.e3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f3" piece={this.state.f3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g3" piece={this.state.g3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h3" piece={this.state.h3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+						<div>
+							<Square value="a2" piece={this.state.a2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b2" piece={this.state.b2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c2" piece={this.state.c2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d2" piece={this.state.d2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e2" piece={this.state.e2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f2" piece={this.state.f2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g2" piece={this.state.g2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h2" piece={this.state.h2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+						<div>
+							<Square value="a1" piece={this.state.a1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="b1" piece={this.state.b1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="c1" piece={this.state.c1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="d1" piece={this.state.d1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="e1" piece={this.state.e1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="f1" piece={this.state.f1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="g1" piece={this.state.g1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							<Square value="h1" piece={this.state.h1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+						</div>
+					  </div>
+
+				);
+				} else {
+					return (
+						<div class="flex-container">
+							<div>
+								<Square value="h1" piece={this.state.h1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g1" piece={this.state.g1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f1" piece={this.state.f1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e1" piece={this.state.e1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d1" piece={this.state.d1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c1" piece={this.state.c1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b1" piece={this.state.b1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a1" piece={this.state.a1} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+
+							</div>
+							<div>
+								<Square value="h2" piece={this.state.h2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g2" piece={this.state.g2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f2" piece={this.state.f2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e2" piece={this.state.e2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d2" piece={this.state.d2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c2" piece={this.state.c2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b2" piece={this.state.b2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a2" piece={this.state.a2} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+							<div>
+								<Square value="h3" piece={this.state.h3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g3" piece={this.state.g3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f3" piece={this.state.f3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e3" piece={this.state.e3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d3" piece={this.state.d3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c3" piece={this.state.c3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b3" piece={this.state.b3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a3" piece={this.state.a3} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+							<div>
+								<Square value="h4" piece={this.state.h4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g4" piece={this.state.g4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f4" piece={this.state.f4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e4" piece={this.state.e4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d4" piece={this.state.d4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c4" piece={this.state.c4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b4" piece={this.state.b4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a4" piece={this.state.a4} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+							<div>
+								<Square value="h5" piece={this.state.h5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g5" piece={this.state.g5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f5" piece={this.state.f5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e5" piece={this.state.e5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d5" piece={this.state.d5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c5" piece={this.state.c5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b5" piece={this.state.b5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a5" piece={this.state.a5} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+							<div >
+								<Square value="h6" piece={this.state.h6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g6" piece={this.state.g6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f6" piece={this.state.f6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e6" piece={this.state.e6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d6" piece={this.state.d6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c6" piece={this.state.c6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b6" piece={this.state.b6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a6" piece={this.state.a6} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+							<div>
+								<Square value="h7" piece={this.state.h7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g7" piece={this.state.g7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f7" piece={this.state.f7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e7" piece={this.state.e7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d7" piece={this.state.d7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c7" piece={this.state.c7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b7" piece={this.state.b7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a7" piece={this.state.a7} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+							<div>
+								<Square value="h8" piece={this.state.h8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="g8" piece={this.state.g8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="f8" piece={this.state.f8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="e8" piece={this.state.e8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="d8" piece={this.state.d8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="c8" piece={this.state.c8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="b8" piece={this.state.b8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+								<Square value="a8" piece={this.state.a8} remove={this.removeSelected} change={this.changeSelectable} select={this.changeToSelected} makeMove={this.move} data={this.state} />
+							</div>
+					  </div>
+					 );
+				}
+			  }
+			}
+
+			class Game extends React.Component {
+				constructor(props) {
+					super(props);
+					this.updatePGN = this.updatePGN.bind(this);
+					this.checkmate = this.checkmate.bind(this);
+					this.stalemate = this.stalemate.bind(this);
+          this.resigned = this.resigned.bind(this);
+          this.offerReceived = this.offerReceived.bind(this);
+          this.offer = this.offer.bind(this);
+          this.drawGame = this.drawGame.bind(this);
+          this.updatePlayer = this.updatePlayer.bind(this);
+					this.state = {
+						pgn: pgnCopy,
+						checkmate: false,
+						resign: false,
+						stalemate: false,
+						side: myTurn,
+            loser: "",
+            draw: false,
+            haveOffer: false,
+            status: gameStatus
+					};
+				}
+
+        updatePlayer(player1, player2) {
+          secondPlayer = player2;
+          if (player2 != "false") {
+            if (myTurn != "n") {
+              this.setState({ status: player1 + " vs. " + player2 });
+            } else {
+              this.setState({ status: "Spectating " + player1 + " vs. " + player2 });
+            }
+          }
+        }
+
+				updatePGN(squares) {
+					this.setState({ pgn: squares.slice(0, squares.length) });
+				};
+
+				resign = (event) => {
+          if (secondPlayer != "false") {
+            $.ajax({
+              type: "POST",
+              url: URL,
+              data: {
+                "checkmate": "resign",
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+              }
+            });
+            if (myTurn === "w") {
+              this.resigned("white");
+              pgn.push("0-1");
+              this.setState({ pgn: pgn });
+            } else {
+              this.resigned("black");
+              pgn.push("1-0");
+              this.setState({ pgn: pgn });
+            }
+          }
+				}
+
+        resigned(user) {
+          this.setState(state=>({ resign: true }));
+          resign = true;
+
+          if (user === "white") {
+            this.setState({ loser: "w" });
+          } else {
+            this.setState({ loser: "b" });
+          }
+        }
+
+				stalemate() {
+					this.setState(state=>({ stalemate: true }));
+          pgn.push("1/2-1/2");
+          this.setState({ pgn: pgn });
+				}
+
+        drawGame() {
+          this.setState({ draw: true });
+          resign = true;
+        }
+
+				checkmate() {
+					this.setState(state=>({ checkmate: true }));
+				}
+
+				flipSide = (event) => {
+					if (this.state.side === "w") {
+						this.setState(state=>({ side: "b" }))
+					} else {
+						this.setState(state=>({ side: "w" }))
+					}
+				}
+
+				victor = (turn) => {
+					if (turn === "w") {
+						return "Black"
+					} else {
+						return "White"
+					}
+				}
+
+				loser = (turn) => {
+					if (turn === "w") {
+						return "White"
+					} else {
+						return "Black"
+					}
+				}
+
+        acceptDraw = (event) => {
+          pgn.push("1/2-1/2");
+          this.setState({ pgn: pgn });
+          this.drawGame();
+          $.ajax({
+            type: "POST",
+            url: URL,
+            data: {
+              "checkmate": "draw",
+              csrfmiddlewaretoken: '{{ csrf_token }}'
+            }
+          });
+
+        }
+
+        offer = (event) => {
+          $.ajax({
+            type: "POST",
+            url: URL,
+            data: {
+              "checkmate": "drawOffer",
+              csrfmiddlewaretoken: '{{ csrf_token }}'
+            }
+          });
+        }
+
+        offerReceived(drawOffer) {
+          if (drawOffer === "white") {
+            if (myTurn === "b") {
+              this.setState({ haveOffer: true });
+            }
+          }
+          else if (drawOffer === "black") {
+            if (myTurn === "w") {
+              this.setState({ haveOffer: true });
+            }
+          }
+          else {
+            this.setState({ haveOffer: false });
+          }
+        }
+
+				render() {
+					if (this.state.checkmate === false && this.state.resign === false && this.state.stalemate === false && this.state.haveOffer === false && this.state.draw === false) {
+						return (
+							<div>
+								<div class="game">
+									<Board player={this.updatePlayer} draw={this.drawGame} checkOffer={this.offerReceived} isResign={this.resigned} gameData={this.props.data} isStalemate={this.stalemate} isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+									<div class = "options">
+										<button onClick={this.flipSide} type="button" id="flip" class="btn btn-info btn-lg">Flip Board</button>
+										<button onClick={this.resign} type="button" id="resign" class="btn btn-info btn-lg">Resign</button>
+                    <button onClick={this.offer} type="button" id="draw" class="btn btn-info btn-lg">Offer Draw</button>
+										<div class = "pgn">
+											<pre> {this.state.pgn} </pre>
+										</div>
+									</div>
+                  <div id="status"> {this.state.status} </div>
+								</div>
+
+							</div>
+						);
+					} else if (this.state.resign === true) {
+						return (
+							<div>
+								<div class="game">
+									<Board isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+									<div class = "checkmate">
+										<checkmate> {this.loser(this.state.loser)} resigned. {this.victor(this.state.loser)} is victorious. </checkmate>
+										<div class = "pgn">
+											<pre> {this.state.pgn} </pre>
+										</div>
+									</div>
+								</div>
+
+							</div>
+						);
+					} else if (this.state.stalemate === true) {
+						return (
+							<div>
+								<div class="game">
+									<Board isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+									<div class = "checkmate">
+										<checkmate> Stalemate. </checkmate>
+										<div class = "pgn">
+											<pre> {this.state.pgn} </pre>
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					} else if (this.state.draw === true) {
+						return (
+							<div>
+								<div class="game">
+									<Board isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+									<div class = "checkmate">
+										<checkmate> Draw. </checkmate>
+										<div class = "pgn">
+											<pre> {this.state.pgn} </pre>
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					} else if (this.state.haveOffer === true && this.state.draw === false) {
+            return (
+              <div>
+                <div class="game">
+                  <Board draw={this.drawGame} checkOffer={this.offerReceived} isResign={this.resigned} gameData={this.props.data} isStalemate={this.stalemate} isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+                  <div class = "options">
+                    <button onClick={this.flipSide} type="button" id="flip" class="btn btn-info btn-lg">Flip Board</button>
+                    <button onClick={this.resign} type="button" id="resign" class="btn btn-info btn-lg">Resign</button>
+                    <button onClick={this.acceptDraw} type="button" id="draw" class="btn btn-info btn-lg">Accept Draw</button>
+                    <div class = "pgn">
+                      <pre> {this.state.pgn} </pre>
+                    </div>
+                  </div>
+                  <div id="status"> {this.state.status} </div>
+                </div>
+              </div>
+            );
+          } else {
+						return (
+							<div>
+								<div class="game">
+									<Board isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+									<div class = "checkmate">
+										<checkmate> Checkmate. {this.victor(turn)} is victorious. </checkmate>
+										<div class = "pgn">
+											<pre> {this.state.pgn} </pre>
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					}
+				}
+			}
+
+      let data = {{gameData|safe}}["gameBoard"];
+
+      ReactDOM.render(<Game data={data} />, document.querySelector("#app"));
+
+        </script>
+    </body>
+</html>

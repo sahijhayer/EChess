@@ -1,0 +1,119 @@
+body {
+	background-image: url("bg.jpg");
+	background-repeat: no-repeat;
+	background-size: 100vw 100vh;
+}
+
+checkmate {
+	font-family: "Lucida Console", "Courier New", monospace;
+	margin: 2px;
+	font-size: 25px;
+}
+
+.checkmate {
+	font-family: "Lucida Console", "Courier New", monospace;
+	margin: 15px;
+	font-size: 25px;
+}
+
+.but {
+    height:85px;
+    width:85px;
+    margin: 0;
+}
+
+.nopiece {
+	height:85px;
+    width:85px;
+    margin: 0;
+	cursor: default;
+}
+
+.but-selectable {
+    height:85px;
+    width:85px;
+    margin: 0;
+    filter: sepia(70%) saturate(300%) brightness(70%) hue-rotate(300deg);
+}
+
+.logo {
+	margin-top: -10px;
+}
+
+.nopiece-selectable {
+	height:85px;
+    width:85px;
+    margin: 0;
+	filter: sepia(70%) saturate(300%) brightness(80%) hue-rotate(60deg);
+}
+
+.options {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: auto;
+
+}
+
+pre {
+	height: 50px;
+	width: 200px;
+	word-wrap: break-word;
+	font-size: 17px;
+	margin: 20px;
+}
+
+.navbar {
+	font-family: "Lucida Console", "Courier New", monospace;
+}
+
+
+#status {
+	font-family: "Lucida Console", "Courier New", monospace;
+	margin: 10px;
+	font-size: 17px;
+}
+
+.pgn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-family: "Lucida Console", "Courier New", monospace;
+
+}
+
+.btn-lg {
+	width: 130px;
+	height: 90px;
+	margin: 10px;
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 10px;
+	font-family: "Lucida Console", "Courier New", monospace;
+}
+.game {
+  display: flex;
+  margin: 10px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.flex-container {
+  display: flex;
+  flex-direction: column;
+  outline: 5px solid grey;
+
+}
+
+.flex-container > div {
+  margin: -2.5px;
+}
+
+.arrow {
+	height: 40px;
+	width: 40px;
+	margin-left: 30px;
+	margin-right: 30px;
+}
