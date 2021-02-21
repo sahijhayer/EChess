@@ -17,6 +17,7 @@
   </nav>
   <body>
     <h1>Games</h1>
+      <pre class="games">
       <ul class="ba">
         {% for game in games %}
           <li>
@@ -24,11 +25,12 @@
               <a href="{% url 'game' game.id %}" class="btn btn-primary stretched-link">
                 <h3 class="card-title">{{game.player1}} vs. {{game.player2}}</h3>
                 <p class="card-text">{{game.endComment}}</p>
-                <pre> {{game.pgn}} </pre>
+                <pre class="pgn"> {{game.pgn}} </pre>
               </a>
             </div>
           </li>
         {% endfor %}
       </ul>
+    </pre>
   </body>
 </html>

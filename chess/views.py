@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from chess.models import *
 from django.core import serializers
+from django.contrib.auth.decorators import user_passes_test
 import math
 
 # Create your views here.
@@ -106,11 +107,28 @@ player2 = "false"
 gameHistory = []
 endComment = ""
 checks = []
+rejected = False
+
+def is_player(user):
+    global players, rejected
+    if len(players) == 2:
+        if user.username in players:
+            return True
+        else:
+            rejected = True
+            return False
+    else:
+        return True
 
 def index(request):
+    global rejected
+    if rejected == True:
+        messages.success(request, "Game is currently full.")
+        rejected = False
     return render(request, "chess/home.html", {})
 
 @login_required(login_url="login")
+@user_passes_test(is_player, login_url="home")
 def play(request):
     global checks, endComment, gameHistory, firstTurn, myTurn, gameData, piece, square1, square2, turn, enPassant, inCheck, pgn, wCastleLeft, wCastleRight, bCastleLeft, bCastleRight, pgnOutput, checkmate, loser, players, player1, player2
 
@@ -219,7 +237,7 @@ def play(request):
                 pgn.append(pgnOutput+request.POST["pgn"])
             turn = request.POST["turn"]
         if checkmate == "true" or checkmate == "stalemate" or checkmate == "resign" or checkmate == "draw":
-
+            global game
             game = Game(player1=player1, player2=player2, pgn=''.join(pgn), endComment=endComment)
             game.save()
 
@@ -478,7 +496,6 @@ def registerPage(request):
         })
 
 def loginPage(request):
-
 	if request.method == "POST":
 		username = request.POST.get("username")
 		password = request.POST.get("password")
@@ -492,18 +509,102 @@ def loginPage(request):
 
 def logoutUser(request):
     global checkmate, myTurn, loser, pgn, turn
-    if myTurn != "none":
+    if myTurn != "none" and len(players) == 2:
         checkmate = "resign"
         if myTurn == "white":
             loser = "white"
             pgn.append("0-1")
+            endComment = "White resigned. Black was victorious."
         elif myTurn == "black":
             loser = "black"
             pgn.append("1-0")
+            endComment = "Black resigned. White was victorious."
         if turn == "w":
             turn = "b"
         else:
             turn = "w"
+        game = Game(player1=player1, player2=player2, pgn=''.join(pgn), endComment=endComment)
+        game.save()
+
+        for i in range(len(gameHistory)):
+            board = Board(
+                game = game,
+                check = i in checks,
+                a1 = gameHistory[i]["a1"],
+                a2 = gameHistory[i]["a2"],
+                a3 = gameHistory[i]["a3"],
+                a4 = gameHistory[i]["a4"],
+                a5 = gameHistory[i]["a5"],
+                a6 = gameHistory[i]["a6"],
+                a7 = gameHistory[i]["a7"],
+                a8 = gameHistory[i]["a8"],
+
+                b1 = gameHistory[i]["b1"],
+                b2 = gameHistory[i]["b2"],
+                b3 = gameHistory[i]["b3"],
+                b4 = gameHistory[i]["b4"],
+                b5 = gameHistory[i]["b5"],
+                b6 = gameHistory[i]["b6"],
+                b7 = gameHistory[i]["b7"],
+                b8 = gameHistory[i]["b8"],
+
+                c1 = gameHistory[i]["c1"],
+                c2 = gameHistory[i]["c2"],
+                c3 = gameHistory[i]["c3"],
+                c4 = gameHistory[i]["c4"],
+                c5 = gameHistory[i]["c5"],
+                c6 = gameHistory[i]["c6"],
+                c7 = gameHistory[i]["c7"],
+                c8 = gameHistory[i]["c8"],
+
+                d1 = gameHistory[i]["d1"],
+                d2 = gameHistory[i]["d2"],
+                d3 = gameHistory[i]["d3"],
+                d4 = gameHistory[i]["d4"],
+                d5 = gameHistory[i]["d5"],
+                d6 = gameHistory[i]["d6"],
+                d7 = gameHistory[i]["d7"],
+                d8 = gameHistory[i]["d8"],
+
+                e1 = gameHistory[i]["e1"],
+                e2 = gameHistory[i]["e2"],
+                e3 = gameHistory[i]["e3"],
+                e4 = gameHistory[i]["e4"],
+                e5 = gameHistory[i]["e5"],
+                e6 = gameHistory[i]["e6"],
+                e7 = gameHistory[i]["e7"],
+                e8 = gameHistory[i]["e8"],
+
+                f1 = gameHistory[i]["f1"],
+                f2 = gameHistory[i]["f2"],
+                f3 = gameHistory[i]["f3"],
+                f4 = gameHistory[i]["f4"],
+                f5 = gameHistory[i]["f5"],
+                f6 = gameHistory[i]["f6"],
+                f7 = gameHistory[i]["f7"],
+                f8 = gameHistory[i]["f8"],
+
+                g1 = gameHistory[i]["g1"],
+                g2 = gameHistory[i]["g2"],
+                g3 = gameHistory[i]["g3"],
+                g4 = gameHistory[i]["g4"],
+                g5 = gameHistory[i]["g5"],
+                g6 = gameHistory[i]["g6"],
+                g7 = gameHistory[i]["g7"],
+                g8 = gameHistory[i]["g8"],
+
+                h1 = gameHistory[i]["h1"],
+                h2 = gameHistory[i]["h2"],
+                h3 = gameHistory[i]["h3"],
+                h4 = gameHistory[i]["h4"],
+                h5 = gameHistory[i]["h5"],
+                h6 = gameHistory[i]["h6"],
+                h7 = gameHistory[i]["h7"],
+                h8 = gameHistory[i]["h8"]
+            )
+            board.save()
+    elif myTurn != "none" and len(players) == 1:
+        checkmate = "resign"
     logout(request)
     return redirect('login')
 

@@ -1,6 +1,0 @@
-- 50 move draw
-- threefold repetition
-- change code for when two pieces can take same piece PGN
-- add comments
-- change "false" to "none" or something else
-- clean up code

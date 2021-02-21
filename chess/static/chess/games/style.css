@@ -9,6 +9,7 @@ body {
 	background-image: url("bg.jpg");
 	background-repeat: no-repeat;
 	background-size: 100vw 100vh;
+  overflow: hidden;
 }
 
 .navbar {
@@ -25,9 +26,17 @@ ul.ba {
 }
 
 .game {
-  margin-bottom: 20px;
+  margin-top: -120px;
 }
 
-pre {
+.pgn {
 	width: 750px;
+}
+
+.games {
+  background-image: url("bg.jpg");
+	background-repeat: no-repeat;
+	background-size: 100vw 100vh;
+  width: 100vw;
+  height: 100vh;
 }

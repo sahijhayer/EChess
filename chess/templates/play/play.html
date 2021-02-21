@@ -1995,7 +1995,21 @@
         }
 
 				render() {
-					if (this.state.checkmate === false && this.state.resign === false && this.state.stalemate === false && this.state.haveOffer === false && this.state.draw === false) {
+          if (this.state.status[0] === "S") {
+            return (
+							<div>
+								<div class="game">
+									<Board player={this.updatePlayer} draw={this.drawGame} checkOffer={this.offerReceived} isResign={this.resigned} gameData={this.props.data} isStalemate={this.stalemate} isCheckmate={this.checkmate} update={this.updatePGN} colour={this.state.side}/>
+									<div class = "options">
+										<div class = "pgn">
+											<pre> {this.state.pgn} </pre>
+										</div>
+									</div>
+                  <div id="status"> {this.state.status} </div>
+								</div>
+							</div>
+						);
+          }	else if (this.state.checkmate === false && this.state.resign === false && this.state.stalemate === false && this.state.haveOffer === false && this.state.draw === false) {
 						return (
 							<div>
 								<div class="game">
